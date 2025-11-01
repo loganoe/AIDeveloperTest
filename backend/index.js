@@ -2,71 +2,62 @@ import express from 'express';
 import cors from 'cors';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const port = 3001; // Listen on port 3001
 
-app.use(cors());
-app.use(express.json());
+app.use(cors()); // Enable CORS for all origins
+app.use(express.json()); // Middleware to parse JSON bodies
 
-let todos = [
-    { id: '1', text: 'Learn React', completed: false },
-    { id: '2', text: 'Build a Todo App', completed: false },
-    { id: '3', text: 'Deploy to Netlify', completed: false }
-];
+let todos = []; // In-memory store for todos
+let nextId = 1; // Counter for unique todo IDs
 
-// Get all todos
+// GET all todos
 app.get('/todos', (req, res) => {
-    res.json(todos);
+  res.json(todos);
 });
 
-// Add a new todo
+// POST a new todo
 app.post('/todos', (req, res) => {
-    const { text } = req.body;
-    if (!text) {
-        return res.status(400).json({ message: 'Todo text is required' });
-    }
-    const newTodo = {
-        id: Date.now().toString(), // Simple unique ID
-        text,
-        completed: false
-    };
-    todos.push(newTodo);
-    res.status(201).json(newTodo);
+  const { title } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+  const newTodo = { id: nextId++, title, completed: false };
+  todos.push(newTodo);
+  res.status(201).json(newTodo);
 });
 
-// Update a todo
+// PUT (update) a todo by ID
 app.put('/todos/:id', (req, res) => {
-    const { id } = req.params;
-    const { text, completed } = req.body;
+  const { id } = req.params;
+  const { title, completed } = req.body;
+  const todoIndex = todos.findIndex(t => t.id === parseInt(id));
 
-    const todoIndex = todos.findIndex(todo => todo.id === id);
+  if (todoIndex === -1) {
+    return res.status(404).json({ error: 'Todo not found' });
+  }
 
-    if (todoIndex === -1) {
-        return res.status(404).json({ message: 'Todo not found' });
-    }
-
-    if (text !== undefined) {
-        todos[todoIndex].text = text;
-    }
-    if (completed !== undefined) {
-        todos[todoIndex].completed = completed;
-    }
-
-    res.json(todos[todoIndex]);
+  // Update fields if provided in the request body
+  if (title !== undefined) {
+    todos[todoIndex].title = title;
+  }
+  if (completed !== undefined) {
+    todos[todoIndex].completed = completed;
+  }
+  res.json(todos[todoIndex]);
 });
 
-// Delete a todo
+// DELETE a todo by ID
 app.delete('/todos/:id', (req, res) => {
-    const { id } = req.params;
-    const initialLength = todos.length;
-    todos = todos.filter(todo => todo.id !== id);
+  const { id } = req.params;
+  const initialLength = todos.length;
+  todos = todos.filter(t => t.id !== parseInt(id));
 
-    if (todos.length === initialLength) {
-        return res.status(404).json({ message: 'Todo not found' });
-    }
-
-    res.status(204).send(); // No content
+  if (todos.length === initialLength) {
+    return res.status(404).json({ error: 'Todo not found' });
+  }
+  res.status(204).send(); // No Content response for successful deletion
 });
 
-app.listen(PORT, () => {
-    console.log(`Backend server running on http://localhost:${PORT}`);
+app.listen(port, () => {
+  console.log(`Backend listening at http://localhost:${port}`);
 });
